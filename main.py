@@ -41,9 +41,9 @@ def get_repositories():
         logger.info(f'Starting to Crawl Repos for GroupId: {GITLAB_GROUP_ID}')
         group = gl.groups.get(GITLAB_GROUP_ID)
         projects = group.projects.list(all=True)
-        repo_names = [project.path_with_namespace for project in projects]
-        logger.info(f"Found {len(repo_names)} repositories in the group.")
-        return repo_names
+        repo_info = [{'path_with_namespace': project.path_with_namespace, 'id': project.id} for project in projects]
+        logger.info(f"Found {len(repo_info)} repositories in the group.")
+        return repo_info
     except Exception as e:
         logger.error(f"Error fetching repositories: {e}")
         return []
@@ -57,7 +57,8 @@ def clone_or_update_repositories(repo_names):
     """
 
     os.makedirs(LOCAL_REPO_DIR, exist_ok=True)
-    for repo_name in repo_names:
+    for repo in repo_names:
+        repo_name = repo['path_with_namespace']
         repo_url = f"{GITLAB_URL}/{repo_name}.git"
         local_path = os.path.join(LOCAL_REPO_DIR, repo_name.replace('/', '_'))
 
@@ -164,6 +165,26 @@ def generate_report_foreach_repo(report: ResultReport):
         logger.info(f"Result Report file saved: {filepath}")
 
 
+def check_pipeline_status(project_id, pipeline_id):
+    """
+    Checks if a GitLab pipeline is running successfully.
+
+    Args:
+        project_id (int): The ID of the GitLab project.
+        pipeline_id (int): The ID of the pipeline to check.
+        private_token (str): Personal access token for GitLab.
+
+    Returns:
+        str: The status of the pipeline.
+    """
+
+    # Get the project
+    project = gl.projects.get(project_id)
+
+    # Get the pipeline
+    pipeline = project.pipelines.get(pipeline_id)
+
+    return pipeline.status
 
 def run_docker_tests(repo_name, repo_path):
     docker_image = f"{DOCKER_IMAGE_PREFIX}/{repo_name.replace('/', '_')}:latest"
@@ -192,15 +213,18 @@ def run_docker_tests(repo_name, repo_path):
 
 
 def main():
-    repo_names = get_repositories()
-    repo_names = repo_names[:5]  # remove me
-    if repo_names:
-        clone_or_update_repositories(repo_names)
-        for repo_name in repo_names:
+    repo_infos = get_repositories()
+    repo_infos = repo_infos[:5]  # remove me
+    if repo_infos:
+        clone_or_update_repositories(repo_infos)
+        for repo in repo_infos:
+            repo_name = repo['path_with_namespace']
+            repo_project_id = repo['id']
             repo_path = os.path.join(LOCAL_REPO_DIR, repo_name.replace('/', '_'))
             result_report = ResultReport(repo_name=repo_name,is_successful_crawled=True)
             result_report.missing_files = check_if_there_are_all_required_files_existing(repo_path)
             result_report.analyse_markdown_character_count = check_if_analyse_md_seems_valid(repo_path, ANALYSE_FILE_NAME)
+            result_report.pipeline_running_successful = check_pipeline_status(repo_project_id, 'FIX ME')
             logger.info(f'Found {len(result_report.missing_files)} Missing Files')
 
             generate_report_foreach_repo(result_report)

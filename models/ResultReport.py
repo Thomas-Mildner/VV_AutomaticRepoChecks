@@ -1,6 +1,7 @@
 class ResultReport:
 
-    def __init__(self, repo_name: str, is_successful_crawled, missing_files: [str] = None, analyse_markdown_character_count: int =None, data=None,
+    def __init__(self, repo_name: str, is_successful_crawled, missing_files: [str] = None,
+                 analyse_markdown_character_count: int = None, pipeline_running_successful: bool = None, data=None,
                  error_message=None):
         """
         Initializes a Result object.
@@ -11,6 +12,7 @@ class ResultReport:
             error_message (str, optional): An error message if the operation failed. Defaults to None.
         """
 
+        self.pipeline_running_successful = pipeline_running_successful
         self.analyse_markdown_character_count = analyse_markdown_character_count
         self.repo_name = repo_name
         self.is_successfulCrawled = is_successful_crawled
