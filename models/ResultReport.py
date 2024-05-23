@@ -5,6 +5,7 @@ class ResultReport:
                  pipeline_running_successful: bool = None, pipeline_job_details: [] = None,
                  missing_keywords_in_pipeline: [] = None, container_image_tag_names: [] = None,
                  container_registry_contains_all_necessary_tags: bool = None,
+                 container_logs: [] = None,
                  data=None,
                  error_message=None):
         """
@@ -16,6 +17,7 @@ class ResultReport:
             error_message (str, optional): An error message if the operation failed. Defaults to None.
         """
 
+        self.container_logs = container_logs
         self.container_registry_contains_all_necessary_tags = container_registry_contains_all_necessary_tags
         self.container_image_tag_names = container_image_tag_names
         self.branch_names = branch_names
@@ -72,9 +74,14 @@ class ResultReport:
             markdown += '## Docker \n'
             markdown += f"\n * **Contains all necessary image tags:** {self.container_registry_contains_all_necessary_tags}\n"
             if self.container_image_tag_names:
-                markdown += "* **Container Tags:**: \n"
+                markdown += "* **Container Tags:** \n"
                 for image_tag in self.container_image_tag_names:
                     markdown += f"{image_tag},"
+            if self.container_logs:
+                markdown += "\n * **Container Logs:** \n"
+                for log_entry in self.container_logs:
+                    log_entry_line = f"\t\t- {log_entry}\n"
+                    markdown += log_entry_line
 
         else:
             markdown += f"* **Error Message:**\n  {self.error_message}\n"

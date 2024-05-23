@@ -1,3 +1,4 @@
+import os
 from datetime import datetime
 
 import docker
@@ -28,31 +29,56 @@ class DockerHelper:
                 for repo in repositories:
                     tags = repo.tags.list()
                     tag_names = [s.name for s in tags]
-                    return DockerHelper.contains_latest_and_date(tag_names), tag_names
+
+                    latest_image_tag = next((tag for tag in tags if 'latest' in tag.name), None)
+                    latest_image_tag_location = ''
+                    if latest_image_tag:
+                        latest_image_tag_location = latest_image_tag.attributes['location']
+                    return DockerHelper.contains_latest_and_date(tag_names), tag_names, latest_image_tag_location
             else:
-                return False, None
+                return False, None, None
         except gitlab.exceptions.GitlabGetError as e:
             logger.warning(f"Error fetching registry information: {e}")
             return False, None
 
     @staticmethod
-    def run_local_docker_image(logger, docker_client, dockerfile_path, image_name,container_name, detach=True):
-        """
-        Runs a Docker image as a container.
+    def authenticate_docker_with_gitlab(registry_url, username, access_token):
+        login_command = f'docker login {registry_url} -u {username} -p {access_token}'
+        response = os.system(login_command)
+        if response != 0:
+            raise Exception("Docker login failed")
 
-        Args:
-            image_tag (str): The tag of the Docker image to run.
-            container_name (str): The name to assign to the running container. Defaults to 'my-container'.
-            detach (bool): Whether to run the container in detached mode. Defaults to True.
-        """
+    @staticmethod
+    def run_docker_image_from_container_registry(logger, docker_client, image_location, container_name, env_vars,
+                                                 detach=True):
+        container_logs = []
         try:
-            print(f"Building Docker image: {image_name}")
-            image, build_logs = docker_client.images.build(path=dockerfile_path, tag=image_name)
-            print(build_logs)
-            container = docker_client.containers.run(image=image_name, name=container_name, detach=detach)
-            print(f"Container {container_name} is running.")
+
+            logger.info(f"Pulling Docker image: {image_location}")
+            image = docker_client.images.pull(image_location)
+            logger.info(f"Successfully pulled Docker image: {image.tags}")
+
+            container = docker_client.containers.run(image=image_location, name=container_name, environment=env_vars,
+                                                     detach=detach)
+            logger.info(f"Container {container_name} is running.")
+
+            # If not detached, wait for the container to finish
+            if not detach:
+                container.wait()
+
+            # Fetch and log the container logs
+            logs = container.logs(stream=True)
+            for log in logs:
+                decoded_log = log.decode('utf-8')
+                container_logs.append(decoded_log)
+                logger.info(decoded_log)
+
+            container.stop()
+            container.remove()
+
+            return container_logs
 
         except docker.errors.BuildError as build_err:
-            print(f"Error building Docker image: {build_err}")
+            logger.error(f"Error building Docker image: {build_err}")
         except docker.errors.APIError as api_err:
-            print(f"Error running Docker container: {api_err}")
+            logger.error(f"Error running Docker container: {api_err}")

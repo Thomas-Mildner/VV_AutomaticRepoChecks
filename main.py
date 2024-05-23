@@ -15,13 +15,17 @@ from src.DockerHelper import DockerHelper
 from src.GitHelper import GitHelper
 
 # Personal Configuration
+GITLAB_USER_NAME= 'thomas.mildner@media-concept.com'
 GITLAB_PRIVATE_TOKEN = 'xeyi4xobsH31FC833m-M'  # Replace with your GitLab private token
 
 # Configuration
+
 current_year = datetime.datetime.now().year % 100  #only last two digits
 GITLAB_URL = 'https://inf-git.fh-rosenheim.de/'
 GITLAB_GROUP_ID = f'vv-inf-sose{current_year}'
 DOCKER_IMAGE_PREFIX = 'your-docker-registry/your-image-prefix'
+
+CLONING_REPOS_LOCALLY = False
 LOCAL_REPO_DIR = f'sose{current_year}repositories'
 LOCAL_RESULT_DIR = f'sose{current_year}results'
 
@@ -169,13 +173,16 @@ def run_docker_tests(repo_name, repo_path):
 
 def main():
     repo_infos = GitHelper.get_repositories(logger=logger, gl=gl, gitlab_group_id=GITLAB_GROUP_ID)
-    repo_infos = repo_infos[:5]  # remove me
+    repo_infos = repo_infos[1:5]  # remove me
     if repo_infos:
-        GitHelper.clone_or_update_repositories(logger=logger, local_repo_dir=LOCAL_REPO_DIR, gitlab_url=GITLAB_URL,
-                                               repo_names=repo_infos)
+        if CLONING_REPOS_LOCALLY:
+            GitHelper.clone_or_update_repositories(logger=logger, local_repo_dir=LOCAL_REPO_DIR, gitlab_url=GITLAB_URL, repo_names=repo_infos)
+
         for repo in repo_infos:
             logger.info('---------------------')
             repo_name = repo['path_with_namespace']
+            logger.info(f'Start analyzing Repo {repo_name}...')
+
             repo_project_id = repo['id']
             result_report = ResultReport(repo_name=repo_name, is_successful_crawled=True)
 
@@ -207,13 +214,16 @@ def main():
             result_report.analyse_markdown_character_count = check_if_analyse_md_seems_valid(repo_path,
                                                                                              ANALYSE_FILE_NAME)
 
-            result_report.container_registry_contains_all_necessary_tags, result_report.container_image_tag_names = DockerHelper.check_if_docker_image_tags_exists_in_registry(
+            result_report.container_registry_contains_all_necessary_tags, result_report.container_image_tag_names, latest_image_tag_location = DockerHelper.check_if_docker_image_tags_exists_in_registry(
                 logger=logger, project=project)
 
             dockerfile_path = next((path for path in project_files if DOCKERFILE_PATH in path), None)
             if dockerfile_path:
-                DockerHelper.run_local_docker_image(logger=logger,  docker_client=docker_client, image_tag='latest', dockerfile_path=dockerfile_path,
-                                          container_name=repo_name, image_name=repo_name)
+                DockerHelper.authenticate_docker_with_gitlab(latest_image_tag_location, GITLAB_USER_NAME, GITLAB_PRIVATE_TOKEN)
+
+                env_vars = {'PATH_ORDERS_SUCCESS': 'my_value', 'PATH_ORDERS_FAILED': 'failed', 'SOCKET_PORT': 9000, 'ORDER_AMOUNT_PROMOTION': 10 }
+                container_name = f'{current_year}_{EXERCISE}_{project.name}'
+                result_report.container_logs = DockerHelper.run_docker_image_from_container_registry(logger=logger,  docker_client=docker_client, image_location=latest_image_tag_location, container_name=container_name, env_vars=env_vars)
             else:
                 logger.warning('No Dockerfile found!')
 
