@@ -4,7 +4,12 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="d0e4958f-359b-4555-a2f9-34e9d6917a3f" name="Changes" comment="">
+    <list default="true" id="d0e4958f-359b-4555-a2f9-34e9d6917a3f" name="Changes" comment="- add repo project id">
+      <change afterPath="$PROJECT_DIR$/src/BuildPipelineHelper.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/DockerHelper.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/GitHelper.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/__init__.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/models/ResultReport.py" beforeDir="false" afterPath="$PROJECT_DIR$/models/ResultReport.py" afterDir="false" />
     </list>
@@ -92,14 +97,53 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1716383894160</updated>
-      <workItem from="1716383906892" duration="5349000" />
+      <workItem from="1716383906892" duration="21094000" />
     </task>
+    <task id="LOCAL-00001" summary="- add repo project id">
+      <option name="closed" value="true" />
+      <created>1716389579223</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1716389579223</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
     <option name="version" value="3" />
   </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="- add repo project id" />
+    <option name="LAST_COMMIT_MESSAGE" value="- add repo project id" />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/main.py</url>
+          <line>214</line>
+          <option name="timeStamp" value="53" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/DockerHelper.py</url>
+          <line>57</line>
+          <option name="timeStamp" value="55" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/src/DockerHelper.py</url>
+          <line>48</line>
+          <option name="timeStamp" value="58" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/main.py</url>
+          <line>212</line>
+          <option name="timeStamp" value="59" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
   <component name="com.intellij.coverage.CoverageDataManagerImpl">
-    <SUITE FILE_PATH="coverage/SS24_Abnahme$main.coverage" NAME="main Coverage Results" MODIFIED="1716388517436" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
+    <SUITE FILE_PATH="coverage/SS24_Abnahme$main.coverage" NAME="main Coverage Results" MODIFIED="1716463336660" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$" />
   </component>
 </project>
