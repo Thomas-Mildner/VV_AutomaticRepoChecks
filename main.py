@@ -172,8 +172,11 @@ def run_docker_tests(repo_name, repo_path):
 
 
 def main():
-    repo_infos = GitHelper.get_repositories(logger=logger, gl=gl, gitlab_group_id=GITLAB_GROUP_ID)
-    repo_infos = repo_infos[1:5]  # remove me
+    #repo_infos = GitHelper.get_repositories(logger=logger, gl=gl, gitlab_group_id=GITLAB_GROUP_ID)
+    #repo_infos = repo_infos[1:5]  # remove me
+
+    repo_infos = []
+    repo_infos.append({'path_with_namespace': 'Adamer', 'id': 15535})
     if repo_infos:
         if CLONING_REPOS_LOCALLY:
             GitHelper.clone_or_update_repositories(logger=logger, local_repo_dir=LOCAL_REPO_DIR, gitlab_url=GITLAB_URL, repo_names=repo_infos)
@@ -221,7 +224,7 @@ def main():
             if dockerfile_path:
                 DockerHelper.authenticate_docker_with_gitlab(latest_image_tag_location, GITLAB_USER_NAME, GITLAB_PRIVATE_TOKEN)
 
-                env_vars = {'PATH_ORDERS_SUCCESS': 'my_value', 'PATH_ORDERS_FAILED': 'failed', 'SOCKET_PORT': 9000, 'ORDER_AMOUNT_PROMOTION': 10 }
+                env_vars = {'PATH_ORDER_SUCCESS': 'orders/success/', 'PATH_ORDER_FAILED': 'orders/failed/', 'PORT': '9000', 'ORDER_AMOUNT_PROMOTION': '100' }
                 container_name = f'{current_year}_{EXERCISE}_{project.name}'
                 result_report.container_logs = DockerHelper.run_docker_image_from_container_registry(logger=logger,  docker_client=docker_client, image_location=latest_image_tag_location, container_name=container_name, env_vars=env_vars)
             else:

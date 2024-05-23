@@ -1,5 +1,8 @@
+import json
 import os
 from datetime import datetime
+import time
+import socket
 
 import docker
 import gitlab
@@ -49,6 +52,26 @@ class DockerHelper:
             raise Exception("Docker login failed")
 
     @staticmethod
+    def send_json_over_tcp(logger, host, port, json_data):
+        logger.info("Sending Json Data via TCP Socket...")
+        try:
+            # Create a socket object
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                # Connect to the server
+                s.connect((host, port))
+
+                # Serialize the JSON data
+                json_str = json.dumps(json_data)
+
+                # Send the serialized JSON data over the socket
+                s.sendall(json_str.encode())
+
+                logger.info("JSON data sent successfully.")
+
+        except Exception as e:
+            logger.error(f"Error sending JSON data: {e}")
+
+    @staticmethod
     def run_docker_image_from_container_registry(logger, docker_client, image_location, container_name, env_vars,
                                                  detach=True):
         container_logs = []
@@ -59,19 +82,73 @@ class DockerHelper:
             logger.info(f"Successfully pulled Docker image: {image.tags}")
 
             container = docker_client.containers.run(image=image_location, name=container_name, environment=env_vars,
-                                                     detach=detach)
+                                                     detach=detach, ports={'9000/tcp': ('127.0.0.1', 9000)})
             logger.info(f"Container {container_name} is running.")
 
             # If not detached, wait for the container to finish
             if not detach:
                 container.wait()
 
+            json_data = '''
+{
+  "order_number": "ORD12345",
+  "datetime": "2024-05-17T15:45:00",
+  "customer": {
+    "name": "Max Mustermann",
+    "email": "max.mustermann@example.com",
+    "address": {
+      "country": "Germany",
+      "street": "Sample Street 123",
+      "city": "Example City",
+      "zip_code": "12345"
+    }
+  },
+  "products": [
+    {
+      "product_id": "PROD00100",
+      "name": "Beer",
+      "quantity": 2,
+      "price": 2.5
+    },
+    {
+      "product_id": "PROD002",
+      "name": "Wine",
+      "quantity": 2,
+      "price": 15
+    },
+    {
+      "product_id": "PROD003",
+      "name": "Water",
+      "quantity": 6,
+      "price": 1
+    }
+  ],
+  "total_price": 41,
+  "payment_method": "Credit Card"
+}
+'''
+            DockerHelper.send_json_over_tcp(logger=logger, host='localhost', port=9000, json_data=json_data)
+
+            # Add a delay to allow the container to execute necessary operations
+            time.sleep(5)
+
+            # Execute a shell command within the container to search for the file recursively
+            exec_result = container.exec_run(['find', '/', '-name', '*.json'])
+            if exec_result.exit_code == 0:
+                # Split the output into lines and iterate over each line
+                for line in exec_result.output.decode('utf-8').split('\n'):
+                    # Check if the line contains the JSON file
+                    if line.endswith('.json'):
+                        logger.info(f"JSON file found: {line}")
+            else:
+                logger.info("No JSON files found in the container.")
+
             # Fetch and log the container logs
-            logs = container.logs(stream=True)
-            for log in logs:
-                decoded_log = log.decode('utf-8')
-                container_logs.append(decoded_log)
-                logger.info(decoded_log)
+            logs = container.logs()
+            decoded_logs = logs.decode('utf-8')
+            for log in decoded_logs.splitlines():
+                container_logs.append(log)
+                logger.info(log)
 
             container.stop()
             container.remove()
