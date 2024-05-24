@@ -14,6 +14,26 @@ Check out the Repository and run the Docker Compose File with following Command
 docker-compose up --build
 ```
 
+Otherwise, use the prebuid Docker image with the following docker-compose file:
+Please note: Create a suitable .env environment file.
+```
+services:
+  ss24_abnahme:
+    build:
+      context: .
+    image: vvthromildner/vv_abnahme_script:latest
+    ports:
+      - "9000:9000"
+    env_file:
+      - .env
+    volumes:
+      - ./results:/app/results
+
+volumes:
+  results:
+
+```
+
 ## Results
 
 The Result Files are stored in result/sose24results.
