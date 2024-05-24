@@ -139,7 +139,14 @@ class DockerHelper:
                                                      detach=detach, ports={f'{container_port}/tcp': ('host.docker.internal', container_port)})
             logger.info(f"Container {container_name} is running.")
 
-            result_report.container_started_successfully = True
+            # Check if the container is running
+            container.reload()  # Refresh the container's attributes
+            if container.status == 'running':
+                result_report.container_started_successfully = True
+                logger.info(f"Container {container_name} is confirmed running.")
+            else:
+                result_report.container_started_successfully = False
+                logger.warning(f"Container {container_name} failed to start. Status: {container.status}")
 
             # If not detached, wait for the container to finish
             if not detach:

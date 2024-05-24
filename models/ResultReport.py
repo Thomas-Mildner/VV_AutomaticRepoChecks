@@ -83,7 +83,7 @@ class ResultReport:
                 for image_tag in self.container_image_tag_names:
                     markdown += f"{image_tag},"
 
-            markdown += f"* **Container started successfully:**\n  {self.container_started_successfully}\n"
+            markdown += f"\n* **Container started successfully:**\n  {self.container_started_successfully}\n"
             markdown += f"* **Good Order Test success?:**\n  {self.container_test_exercise01_good_order_successful}\n"
             markdown += f"* **Bad Order Test success?:**\n  {self.container_test_exercise01_bad_order_successful}\n"
             if self.container_logs:
