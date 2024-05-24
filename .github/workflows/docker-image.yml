@@ -14,5 +14,23 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: Login to DockerHub
+      uses: docker/login-action@v1
+      with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+    - name: Set Docker image name
+      run: echo "DOCKER_IMAGE_NAME=vvthromildner/vv_abnahme_script" >> $GITHUB_ENV
+    - name: Set docker image tag env
+      run: echo "DOCKER_TAG_VERSION=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+    
     - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag vv_abnahme_script$(date +%s)
+      uses: docker/build-push-action@v2
+      with:
+        context: .
+        push: true
+        tags: |
+            ${{ env.DOCKER_IMAGE_NAME }}:${{ env.DOCKER_TAG_VERSION }}
+            ${{ env.DOCKER_IMAGE_NAME }}:latest
+   
+    
