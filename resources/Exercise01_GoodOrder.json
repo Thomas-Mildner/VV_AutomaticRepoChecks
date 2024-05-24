@@ -1,0 +1,36 @@
+{
+  "order_number": "ORD12345",
+  "datetime": "2024-05-17T15:45:00",
+  "customer": {
+    "name": "Max Mustermann",
+    "email": "max.mustermann@example.com",
+    "address": {
+      "country": "Germany",
+      "street": "Sample Street 123",
+      "city": "Example City",
+      "zip_code": "12345"
+    }
+  },
+  "products": [
+    {
+      "product_id": "PROD00100",
+      "name": "Beer",
+      "quantity": 2,
+      "price": 2.5
+    },
+    {
+      "product_id": "PROD002",
+      "name": "Wine",
+      "quantity": 2,
+      "price": 15
+    },
+    {
+      "product_id": "PROD003",
+      "name": "Water",
+      "quantity": 6,
+      "price": 1
+    }
+  ],
+  "total_price": 41,
+  "payment_method": "Credit Card"
+}

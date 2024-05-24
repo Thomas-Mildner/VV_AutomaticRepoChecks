@@ -1,0 +1,15 @@
+services:
+  ss24_abnahme:
+    build:
+      context: .
+    #image: ss24_abnahme:latest
+    ports:
+      - "9000:9000"
+    env_file:
+      - .env
+    volumes:
+      - ./results:/app/results
+
+volumes:
+  results:
+

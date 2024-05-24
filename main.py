@@ -1,5 +1,8 @@
+import csv
 import os
 import subprocess
+import warnings
+
 import git
 import docker
 import shutil
@@ -15,21 +18,21 @@ from src.DockerHelper import DockerHelper
 from src.GitHelper import GitHelper
 
 # Personal Configuration
-GITLAB_USER_NAME= 'thomas.mildner@media-concept.com'
-GITLAB_PRIVATE_TOKEN = 'xeyi4xobsH31FC833m-M'  # Replace with your GitLab private token
+GITLAB_USER_NAME = os.getenv('GITLAB_USER_NAME')
+GITLAB_PRIVATE_TOKEN = os.getenv('GITLAB_PRIVATE_TOKEN')
 
 # Configuration
 
 current_year = datetime.datetime.now().year % 100  #only last two digits
 GITLAB_URL = 'https://inf-git.fh-rosenheim.de/'
 GITLAB_GROUP_ID = f'vv-inf-sose{current_year}'
-DOCKER_IMAGE_PREFIX = 'your-docker-registry/your-image-prefix'
 
 CLONING_REPOS_LOCALLY = False
 LOCAL_REPO_DIR = f'sose{current_year}repositories'
-LOCAL_RESULT_DIR = f'sose{current_year}results'
+LOCAL_RESULT_DIR = f'/app/results/sose{current_year}results'
+CSV_FILENAME = 'all_reports.csv'
 
-EXERCISE = 'Exercise01'
+EXERCISE = os.getenv('EXERCISE')
 
 # Exercise Settings
 REQUIRED_REPO_FILES = ['.GITIGNORE', f'{EXERCISE.upper()}/DOC/ANALYSE.MD', f'{EXERCISE.upper()}/.GITLAB-CI.YML',
@@ -43,11 +46,14 @@ ANALYSE_FILE_NAME = "Analyse.md"
 
 # Initialize GitLab and Docker clients
 gl = gitlab.Gitlab(GITLAB_URL, private_token=GITLAB_PRIVATE_TOKEN)
-docker_client = docker.DockerClient(base_url='tcp://localhost:2375')
+docker_client = docker.DockerClient(base_url='tcp://host.docker.internal:2375')  # access docker from host machine
 
 # Setup logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
+
+# Suppress warnings in output log
+warnings.filterwarnings(action="ignore")
 
 
 def list_project_files_recursive(project, branch='main', path=''):
@@ -134,6 +140,7 @@ def check_if_analyse_md_seems_valid(repo_path, filename):
 
 
 def generate_report_foreach_repo(report: ResultReport):
+    logger.info("=== Writing Results ===")
     logger.info(f'Generating ResultReport in Folder {LOCAL_RESULT_DIR}')
     markdown = report.generate_markdown()
     os.makedirs(LOCAL_RESULT_DIR, exist_ok=True)
@@ -145,30 +152,23 @@ def generate_report_foreach_repo(report: ResultReport):
         logger.info(f"Result Report file saved: {filepath}")
 
 
-def run_docker_tests(repo_name, repo_path):
-    docker_image = f"{DOCKER_IMAGE_PREFIX}/{repo_name.replace('/', '_')}:latest"
-    try:
-        logger.info(f"Pulling Docker image {docker_image}")
-        #  client.images.pull(docker_image)
+def generate_csv_for_all_reports(reports):
+    csv_filepath = os.path.join(LOCAL_RESULT_DIR, CSV_FILENAME)
+    with open(csv_filepath, 'w', newline='') as csvfile:
+        fieldnames = [
+            'repo_name', 'is_successfulCrawled', 'repo_has_multiple_branches', 'branch_names', 'missing_files',
+            'analyse_markdown_character_count', 'counted_commits', 'git_repo_last_updated_at', 'pipeline_running_successful',
+            'pipeline_job_details', 'missing_keywords_in_pipeline', 'container_image_tag_names', 'container_registry_contains_all_necessary_tags',
+            'container_started_successfully', 'container_logs', 'container_test_exercise01_good_order_successful',
+            'container_test_exercise01_bad_order_successful', 'error_message'
+        ]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames, delimiter=';')
 
-        logger.info(f"Running Docker container for {repo_name}")
-        # container = client.containers.run(
-        #     docker_image,
-        #     command=DOCKER_TEST_COMMAND,
-        #     volumes={repo_path: {'bind': '/repo', 'mode': 'rw'}},
-        #     working_dir='/repo',
-        #     detach=True
-        # )
+        writer.writeheader()
+        for report in reports:
+            writer.writerow(report.to_csv_row())
 
-    # logs = container.logs(stream=True)
-    #   for log in logs:
-    #       logger.info(log.strip())
-
-    #   container.wait()
-    #    logger.info(f"Tests completed for {repo_name}")
-    #   container.remove()
-    except Exception as e:
-        logger.error(f"Error running Docker tests for {repo_name}: {e}")
+    logger.info(f"CSV file for all reports saved: {csv_filepath}")
 
 
 def main():
@@ -176,11 +176,13 @@ def main():
     #repo_infos = repo_infos[1:5]  # remove me
 
     repo_infos = []
-    repo_infos.append({'path_with_namespace': 'Adamer', 'id': 15535})
+    repo_infos.append({'path_with_namespace': 'Adamer', 'id': 15535})  #todo remove me
+
     if repo_infos:
         if CLONING_REPOS_LOCALLY:
-            GitHelper.clone_or_update_repositories(logger=logger, local_repo_dir=LOCAL_REPO_DIR, gitlab_url=GITLAB_URL, repo_names=repo_infos)
-
+            GitHelper.clone_or_update_repositories(logger=logger, local_repo_dir=LOCAL_REPO_DIR, gitlab_url=GITLAB_URL,
+                                                   repo_names=repo_infos)
+        result_reports = []
         for repo in repo_infos:
             logger.info('---------------------')
             repo_name = repo['path_with_namespace']
@@ -190,13 +192,16 @@ def main():
             result_report = ResultReport(repo_name=repo_name, is_successful_crawled=True)
 
             project = gl.projects.get(repo_project_id)
+            logger.info("=== Git Checks ===")
 
             result_report.counted_commits, result_report.git_repo_last_updated_at = GitHelper.count_git_commits(gl=gl,
                                                                                                                 project=project)
             result_report.branch_names = GitHelper.git_get_branch_names(logger=logger, project=project)
             result_report.repo_has_multiple_branches = len(result_report.branch_names)
 
+            logger.info('Searching for all Files in Repository')
             project_files = list_project_files_recursive(project=project)
+            logger.info(f'Found {len(project_files)} Files to process')
 
             result_report.pipeline_running_successful, result_report.pipeline_job_details = BuildPipelineHelper.check_pipeline_status(
                 project=project)
@@ -210,6 +215,8 @@ def main():
             else:
                 result_report.missing_keywords_in_pipeline = GITLAB_CI_REQUIRED_KEYWORDS
 
+            logger.info("=== File Checking ===")
+
             repo_path = os.path.join(LOCAL_REPO_DIR, repo_name.replace('/', '_'))
 
             result_report.missing_files = check_if_there_are_all_required_files_existing(repo_files=project_files,
@@ -222,16 +229,29 @@ def main():
 
             dockerfile_path = next((path for path in project_files if DOCKERFILE_PATH in path), None)
             if dockerfile_path:
-                DockerHelper.authenticate_docker_with_gitlab(latest_image_tag_location, GITLAB_USER_NAME, GITLAB_PRIVATE_TOKEN)
+                logger.info("=== Docker Checks ===")
+                DockerHelper.authenticate_docker_with_gitlab(latest_image_tag_location, GITLAB_USER_NAME,
+                                                             GITLAB_PRIVATE_TOKEN)
+                container_port = 9500
 
-                env_vars = {'PATH_ORDER_SUCCESS': 'orders/success/', 'PATH_ORDER_FAILED': 'orders/failed/', 'PORT': '9000', 'ORDER_AMOUNT_PROMOTION': '100' }
-                container_name = f'{current_year}_{EXERCISE}_{project.name}'
-                result_report.container_logs = DockerHelper.run_docker_image_from_container_registry(logger=logger,  docker_client=docker_client, image_location=latest_image_tag_location, container_name=container_name, env_vars=env_vars)
+                env_vars = {'PATH_ORDER_SUCCESS': 'orders/success/', 'PATH_ORDER_FAILED': 'orders/failed/',
+                            'PORT': f'{container_port}', 'ORDER_AMOUNT_PROMOTION': '100'}
+                container_name = f'{current_year}_{EXERCISE}_{project.name}1'
+                result_report.container_logs = DockerHelper.run_docker_image_from_container_registry(logger=logger,
+                                                                                                     docker_client=docker_client,
+                                                                                                     image_location=latest_image_tag_location,
+                                                                                                     container_name=container_name,
+                                                                                                     env_vars=env_vars,
+                                                                                                     result_report=result_report,
+                                                                                                     container_port=container_port)
             else:
                 logger.warning('No Dockerfile found!')
 
             generate_report_foreach_repo(result_report)
+            result_reports.append(result_report)
             logger.info('---------------------')
+
+        generate_csv_for_all_reports(result_reports)
     else:
         logger.error("No repositories to process")
 

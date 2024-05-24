@@ -4,8 +4,10 @@ class ResultReport:
                  analyse_markdown_character_count: int = None, counted_commits: int = None, git_repo_last_updated_at= None,
                  pipeline_running_successful: bool = None, pipeline_job_details: [] = None,
                  missing_keywords_in_pipeline: [] = None, container_image_tag_names: [] = None,
-                 container_registry_contains_all_necessary_tags: bool = None,
+                 container_registry_contains_all_necessary_tags: bool = None, container_started_successfully: bool = None,
                  container_logs: [] = None,
+                 container_test_exercise01_good_order_successful: bool = None,
+                 container_test_exercise01_bad_order_successful: bool = None,
                  data=None,
                  error_message=None):
         """
@@ -17,6 +19,9 @@ class ResultReport:
             error_message (str, optional): An error message if the operation failed. Defaults to None.
         """
 
+        self.container_test_exercise01_bad_order_successful = container_test_exercise01_bad_order_successful
+        self.container_test_exercise01_good_order_successful = container_test_exercise01_good_order_successful
+        self.container_started_successfully = container_started_successfully
         self.container_logs = container_logs
         self.container_registry_contains_all_necessary_tags = container_registry_contains_all_necessary_tags
         self.container_image_tag_names = container_image_tag_names
@@ -77,13 +82,45 @@ class ResultReport:
                 markdown += "* **Container Tags:** \n"
                 for image_tag in self.container_image_tag_names:
                     markdown += f"{image_tag},"
+
+            markdown += f"* **Container started successfully:**\n  {self.container_started_successfully}\n"
+            markdown += f"* **Good Order Test success?:**\n  {self.container_test_exercise01_good_order_successful}\n"
+            markdown += f"* **Bad Order Test success?:**\n  {self.container_test_exercise01_bad_order_successful}\n"
             if self.container_logs:
                 markdown += "\n * **Container Logs:** \n"
                 for log_entry in self.container_logs:
-                    log_entry_line = f"\t\t- {log_entry}\n"
+                    log_entry_line = f"\n\t\t- {log_entry}\n"
                     markdown += log_entry_line
 
         else:
             markdown += f"* **Error Message:**\n  {self.error_message}\n"
 
         return markdown
+
+    def to_csv_row(self):
+        """
+        Generates a dictionary representing the CSV row of the Result object.
+
+        Returns:
+            dict: A dictionary representing the CSV row.
+        """
+        return {
+            'repo_name': self.repo_name,
+            'is_successfulCrawled': self.is_successfulCrawled,
+            'repo_has_multiple_branches': self.repo_has_multiple_branches,
+            'branch_names': ','.join(self.branch_names) if self.branch_names else '',
+            'missing_files': ','.join(self.missing_files) if self.missing_files else '',
+            'analyse_markdown_character_count': self.analyse_markdown_character_count,
+            'counted_commits': self.counted_commits,
+            'git_repo_last_updated_at': self.git_repo_last_updated_at,
+            'pipeline_running_successful': self.pipeline_running_successful,
+            'pipeline_job_details': ';'.join([f"{job['name']}:{job['status']}:{job['stage']}:{job['started_at']}" for job in self.pipeline_job_details]) if self.pipeline_job_details else '',
+            'missing_keywords_in_pipeline': ','.join(self.missing_keywords_in_pipeline) if self.missing_keywords_in_pipeline else '',
+            'container_image_tag_names': ','.join(self.container_image_tag_names) if self.container_image_tag_names else '',
+            'container_registry_contains_all_necessary_tags': self.container_registry_contains_all_necessary_tags,
+            'container_started_successfully': self.container_started_successfully,
+            'container_logs': ';'.join(self.container_logs) if self.container_logs else '',
+            'container_test_exercise01_good_order_successful': self.container_test_exercise01_good_order_successful,
+            'container_test_exercise01_bad_order_successful': self.container_test_exercise01_bad_order_successful,
+            'error_message': self.error_message
+        }
