@@ -8,6 +8,10 @@ GITLAB_PRIVATE_TOKEN=TOKEN
 EXERCISE=Exercise01
 ```
 
+On Windows: Open Docker Desktop and allow tcp://localhost:2375 to access Docker from Host Machine
+![image](https://github.com/Thomas-Mildner/VV_AutomaticRepoChecks/assets/12685945/05fc1101-693b-4df6-acac-72067f7722a3)
+
+
 ## How to use
 Check out the Repository and run the Docker Compose File with following Command
 ```
