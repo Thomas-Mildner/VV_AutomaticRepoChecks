@@ -2,7 +2,7 @@ services:
   ss24_abnahme:
     build:
       context: .
-    #image: ss24_abnahme:latest
+    image: vvthromildner/vv_abnahme_script:latest
     ports:
       - "9000:9000"
     env_file:
