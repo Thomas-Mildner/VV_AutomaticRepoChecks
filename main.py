@@ -113,30 +113,28 @@ def check_if_there_are_all_required_files_existing(repo_files):
         return REQUIRED_REPO_FILES
 
 
-def check_if_analyse_md_seems_valid(repo_path, filename):
+def check_if_analyse_md_seems_valid(logger, project, file_path, branch='main'):
     """
      Searches a directory recursively for "analyse.md" file, opens it, counts characters, and closes it.
 
      Args:
-         repo_path (str): The path to the directory to start searching.
-         filename (str): the name of the file
+         logger (logger): Logger Instance
+         project (project): Gitlab Project
+         file_path (str): The path of the Analyse markdown file
+         branch (str): The branch name. Defaults to 'main'.
 
      Returns:
          int: The number of characters in the file (or 0 if not found).
      """
-
-    for root, _, files in os.walk(repo_path):
-        for folder_file_name in files:
-            if folder_file_name == filename:
-                filepath = os.path.join(root, folder_file_name)
-                with open(filepath, 'r') as f:
-                    content = f.read()
-                    # Count characters (excluding newline characters)
-                    character_count = len(content.replace('\n', ''))
-                    return character_count
-    else:
-        logger.warning(f"File 'analyse.md' not found in directory or its subdirectories: {repo_path}")
+    if not file_path:
+        logger.warning('No Markdown Analyse File found')
         return 0
+
+    file = project.files.get(file_path=file_path, ref=branch)
+    content = file.decode().decode('utf-8')
+    # Count characters (excluding newline characters)
+    character_count = len(content.replace('\n', ''))
+    return character_count
 
 
 def generate_report_foreach_repo(report: ResultReport):
@@ -193,17 +191,15 @@ def main():
                 project = gl.projects.get(repo_project_id)
                 logger.info("=== Git Checks ===")
 
-                result_report.counted_commits, result_report.git_repo_last_updated_at = GitHelper.count_git_commits(gl=gl,
-                                                                                                                    project=project)
+                result_report.counted_commits, result_report.git_repo_last_updated_at = GitHelper.count_git_commits(gl=gl, project=project)
                 result_report.branch_names = GitHelper.git_get_branch_names(logger=logger, project=project)
-                result_report.repo_has_multiple_branches = len(result_report.branch_names)
+                result_report.repo_has_multiple_branches = len(result_report.branch_names) > 1
 
                 logger.info('Searching for all Files in Repository')
                 project_files = list_project_files_recursive(project=project)
                 logger.info(f'Found {len(project_files)} Files to process')
 
-                result_report.pipeline_running_successful, result_report.pipeline_job_details = BuildPipelineHelper.check_pipeline_status(
-                    project=project)
+                result_report.pipeline_running_successful, result_report.pipeline_job_details = BuildPipelineHelper.check_pipeline_status(project=project)
 
                 pipeline_path = next((path for path in project_files if GITLAB_CI_PATH in path), None)
                 if pipeline_path:
@@ -216,11 +212,10 @@ def main():
 
                 logger.info("=== File Checking ===")
 
-                repo_path = os.path.join(LOCAL_REPO_DIR, repo_name.replace('/', '_'))
-
                 result_report.missing_files = check_if_there_are_all_required_files_existing(repo_files=project_files)
-                result_report.analyse_markdown_character_count = check_if_analyse_md_seems_valid(repo_path,
-                                                                                                 ANALYSE_FILE_NAME)
+
+                analyse_markdown_file = next((path for path in project_files if ANALYSE_FILE_NAME in path), None)
+                result_report.analyse_markdown_character_count = check_if_analyse_md_seems_valid(logger=logger, project=project, file_path=analyse_markdown_file, branch='main')
 
                 result_report.container_registry_contains_all_necessary_tags, result_report.container_image_tag_names, latest_image_tag_location = DockerHelper.check_if_docker_image_tags_exists_in_registry(
                     logger=logger, project=project)
