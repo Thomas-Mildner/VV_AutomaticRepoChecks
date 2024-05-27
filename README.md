@@ -11,6 +11,17 @@ EXERCISE=Exercise01
 On Windows: Open Docker Desktop and allow tcp://localhost:2375 to access Docker from Host Machine
 ![image](https://github.com/Thomas-Mildner/VV_AutomaticRepoChecks/assets/12685945/05fc1101-693b-4df6-acac-72067f7722a3)
 
+On Linux:
+Enable TCP access: Verify that the Docker daemon is configured to listen on the TCP socket tcp://host.docker.internal:2375. You might need to modify the Docker daemon configuration file (usually located at /etc/docker/daemon.json on Linux) to include something like:
+```
+{
+    "hosts": ["tcp://0.0.0.0:2375", "unix:///var/run/docker.sock"]
+}
+```
+After making the change, restart the Docker Service:
+```
+sudo systemctl restart docker
+```
 
 ## How to use
 Check out the Repository and run the Docker Compose File with following Command
